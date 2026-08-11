@@ -92,3 +92,13 @@ def test_windows_launcher_bootstraps_an_isolated_environment():
     assert ".venv\\Scripts\\python.exe" in launcher
     assert "-m venv .venv" in launcher
     assert "-m pip install -r requirements.txt" in launcher
+
+
+def test_animation_locks_ranges_and_yields_to_camera_interaction():
+    source = viewer_source()
+    assert "computeSceneRanges" in source
+    assert "autorange: false" in source
+    assert "userInteracting" in source
+    assert 'plot.addEventListener("mousedown"' in source
+    assert 'document.addEventListener("mouseup"' in source
+    assert "if (userInteracting)" in source

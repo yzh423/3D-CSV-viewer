@@ -346,6 +346,7 @@
     let playing = false;
     let animationRequest = null;
     let previousFrameAt = 0;
+    let userInteracting = false;
 
     function quaternionToMatrix(quaternion) {
       const [w0, x0, y0, z0] = quaternion.map(Number);
@@ -468,20 +469,38 @@
       return traces;
     }
 
+    function computeSceneRanges(episode) {
+      const values = [[], [], []];
+      for (const trace of episode.traces) {
+        [trace.x, trace.y, trace.z].forEach((coordinates, axis) => {
+          for (const value of coordinates || []) if (Number.isFinite(Number(value))) values[axis].push(Number(value));
+        });
+      }
+      const margin = Math.max(episode.axisLength * 1.25, 0.01);
+      return values.map(axisValues => {
+        if (!axisValues.length) return [-0.5, 0.5];
+        const minimum = Math.min(...axisValues), maximum = Math.max(...axisValues);
+        const center = (minimum + maximum) / 2;
+        const half = Math.max((maximum - minimum) / 2 + margin, margin);
+        return [center - half, center + half];
+      });
+    }
+
     async function renderActiveEpisode(index) {
       pauseAnimation();
       activeEpisode = loadedEpisodes[index] || null;
       playbackTime = 0;
       if (!activeEpisode) return;
       currentTraces = [...activeEpisode.traces, ...animationTraces(activeEpisode)];
+      activeEpisode.sceneRanges = computeSceneRanges(activeEpisode);
       await Plotly.react(plot, currentTraces, {
         margin: { l: 0, r: 0, t: 32, b: 0 }, paper_bgcolor: "#fff", plot_bgcolor: "#fff",
         legend: { orientation: "h", x: 0.02, y: 1.02, bgcolor: "rgba(255,255,255,.85)" },
         scene: {
           aspectmode: "data", bgcolor: "#fbfcfa",
-          xaxis: { title: "X (m)", gridcolor: "#e3e7e4" },
-          yaxis: { title: "Y (m)", gridcolor: "#e3e7e4" },
-          zaxis: { title: "Z (m)", gridcolor: "#e3e7e4" }
+          xaxis: { title: "X (m)", gridcolor: "#e3e7e4", autorange: false, range: activeEpisode.sceneRanges[0] },
+          yaxis: { title: "Y (m)", gridcolor: "#e3e7e4", autorange: false, range: activeEpisode.sceneRanges[1] },
+          zaxis: { title: "Z (m)", gridcolor: "#e3e7e4", autorange: false, range: activeEpisode.sceneRanges[2] }
         }, uirevision: `episode-${index}`
       }, { responsive: true, displaylogo: false, scrollZoom: true });
       timeSlider.disabled = activeEpisode.duration <= 0;
@@ -524,7 +543,13 @@
         if (loopToggle.checked) next %= Math.max(activeEpisode.duration, 1e-9);
         else { next = activeEpisode.duration; pauseAnimation(); }
       }
-      renderAnimationFrame(next);
+      if (userInteracting) {
+        playbackTime = next;
+        timeSlider.value = activeEpisode.duration ? Math.round(playbackTime / activeEpisode.duration * 10000) : 0;
+        timeLabel.textContent = `${playbackTime.toFixed(2)} / ${activeEpisode.duration.toFixed(2)} s`;
+      } else {
+        renderAnimationFrame(next);
+      }
       if (playing) animationRequest = requestAnimationFrame(animationLoop);
     }
 
@@ -582,6 +607,15 @@
     });
     rightToggle.addEventListener("change", applyArmVisibility);
     leftToggle.addEventListener("change", applyArmVisibility);
+    plot.addEventListener("mousedown", () => { userInteracting = true; });
+    plot.addEventListener("touchstart", () => { userInteracting = true; }, { passive: true });
+    function finishCameraInteraction() {
+      if (!userInteracting) return;
+      userInteracting = false;
+      requestAnimationFrame(() => { if (activeEpisode) renderAnimationFrame(playbackTime); });
+    }
+    document.addEventListener("mouseup", finishCameraInteraction);
+    document.addEventListener("touchend", finishCameraInteraction, { passive: true });
   </script>
 </body>
 </html>
