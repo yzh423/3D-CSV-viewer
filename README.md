@@ -12,7 +12,7 @@ Open-source tools for inspecting robot TCP and controller trajectories stored in
 - Draws the moving TCP tool frame from `*_tcp_quat_w/x/y/z`: X red, Y green, Z blue.
 - Includes play/pause, timeline scrubbing, `0.25×–4×` speed, looping, per-arm visibility, 3D rotation, pan, and zoom.
 
-Windows users can double-click [`tools/episode-3d-desktop/run_viewer.bat`](tools/episode-3d-desktop/run_viewer.bat). Cross-platform launch:
+Windows users can double-click [`tools/episode-3d-desktop/run_viewer.bat`](tools/episode-3d-desktop/run_viewer.bat). Apple Silicon Mac users can double-click [`tools/episode-3d-desktop/run_viewer.command`](tools/episode-3d-desktop/run_viewer.command) after installing the dependencies below. Cross-platform launch:
 
 ```bash
 python -m venv .venv
@@ -21,6 +21,12 @@ python -m venv .venv
 pip install -r requirements.txt
 python scripts/episode_3d_desktop.py examples/demo_episode.csv
 ```
+
+### Apple Silicon macOS application
+
+The release workflow builds a native ARM64 `3D-CSV-viewer.app` for M1, M2, M3, M4, and later Apple Silicon Macs. Download `3D-CSV-viewer-macOS-arm64.zip` from the latest release or the **Build macOS ARM64 app** workflow artifact.
+
+The app is not notarized with an Apple Developer certificate. On first launch, extract the ZIP, Control-click `3D-CSV-viewer.app`, choose **Open**, then confirm **Open**. macOS remembers the approval for later launches.
 
 ### Offline browser viewer / 离线浏览器查看器
 
@@ -52,7 +58,7 @@ pip install -r requirements-dev.txt
 pytest -q
 ```
 
-GitHub Actions runs the tests on Windows and Ubuntu. The Windows build workflow produces a downloadable PyInstaller application artifact.
+GitHub Actions runs the tests on Windows, Ubuntu, and Apple Silicon macOS. Build workflows produce downloadable Windows x64 and macOS ARM64 PyInstaller application artifacts.
 
 ## Privacy
 

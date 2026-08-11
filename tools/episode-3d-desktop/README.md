@@ -4,11 +4,13 @@
 
 ## 启动
 
-双击 `run_viewer.bat`，然后点击“打开 CSV”。也可以在项目根目录直接加载指定 episode：
+Windows 双击 `run_viewer.bat`；Apple Silicon Mac 双击 `run_viewer.command`。然后点击“打开 CSV”。也可以在项目根目录直接加载指定 episode：
 
 ```powershell
 python scripts/episode_3d_desktop.py examples/demo_episode.csv
 ```
+
+macOS 首次运行未公证的 `.app` 时，请按住 Control 点击应用，选择“打开”，再确认“打开”。
 
 ## 操作
 

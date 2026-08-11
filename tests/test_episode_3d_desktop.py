@@ -18,7 +18,7 @@ from scripts.episode_3d_desktop import (  # noqa: E402
 def test_matplotlib_uses_a_chinese_capable_font():
     from matplotlib import rcParams
 
-    assert rcParams["font.sans-serif"][0] == "Microsoft YaHei"
+    assert rcParams["font.sans-serif"][0] == "PingFang SC"
 
 
 def write_episode(path: Path, include_left=True, include_right=True) -> Path:

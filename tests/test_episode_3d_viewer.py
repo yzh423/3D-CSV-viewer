@@ -2,6 +2,7 @@ from pathlib import Path
 
 
 VIEWER = Path(__file__).parents[1] / "tools" / "episode-3d-viewer" / "index.html"
+ROOT = Path(__file__).parents[1]
 
 
 def viewer_source() -> str:
@@ -50,3 +51,14 @@ def test_viewer_includes_camera_reset_and_empty_error_states():
 def test_plot_is_initialized_before_plotly_event_binding():
     source = viewer_source()
     assert source.index("Plotly.newPlot") < source.index('plot.on("plotly_click"')
+
+
+def test_repository_has_apple_silicon_launcher_and_build_workflow():
+    launcher = ROOT / "tools" / "episode-3d-desktop" / "run_viewer.command"
+    workflow = ROOT / ".github" / "workflows" / "build-macos-arm64.yml"
+    assert launcher.is_file()
+    assert "scripts/episode_3d_desktop.py" in launcher.read_text(encoding="utf-8")
+    source = workflow.read_text(encoding="utf-8")
+    assert "macos-latest" in source
+    assert "--target-arch arm64" in source
+    assert "3D-CSV-viewer.app" in source

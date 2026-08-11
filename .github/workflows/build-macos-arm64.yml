@@ -1,0 +1,33 @@
+name: Build macOS ARM64 app
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pyinstaller
+      - name: Build Apple Silicon application
+        run: >-
+          pyinstaller --noconfirm --clean --windowed
+          --name 3D-CSV-viewer
+          --target-arch arm64
+          --osx-bundle-identifier com.yzh423.csv3dviewer
+          scripts/episode_3d_desktop.py
+      - name: Archive application bundle
+        run: ditto -c -k --sequesterRsrc --keepParent dist/3D-CSV-viewer.app 3D-CSV-viewer-macOS-arm64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 3D-CSV-viewer-macOS-arm64
+          path: 3D-CSV-viewer-macOS-arm64.zip
