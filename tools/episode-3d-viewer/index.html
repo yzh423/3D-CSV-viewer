@@ -133,8 +133,10 @@
         <div><strong>拖入 Episode CSV</strong><span>支持一次选择多个文件</span></div>
       </div>
       <input id="csv-input" type="file" accept=".csv,text/csv" multiple>
+      <input id="folder-input" type="file" accept=".csv,text/csv" webkitdirectory multiple>
       <div class="button-row">
         <label for="csv-input" class="file-button" tabindex="0">选择 CSV</label>
+        <label for="folder-input" class="file-button" tabindex="0">选择文件夹</label>
         <button id="reset-camera" type="button" disabled>重置视角</button>
       </div>
       <div class="animation-panel" aria-label="动画播放控制">
@@ -189,6 +191,7 @@
     const MAX_RENDER_POINTS = 12000;
     const DASHES = ["solid", "dash", "dot", "dashdot"];
     const input = document.getElementById("csv-input");
+    const folderInput = document.getElementById("folder-input");
     const dropZone = document.getElementById("drop-zone");
     const plot = document.getElementById("plot");
     const fileList = document.getElementById("file-list");
@@ -200,6 +203,10 @@
     let currentTraces = [];
     let summaries = [];
     let errors = [];
+
+    function fileDisplayName(file) {
+      return file.webkitRelativePath || file.name;
+    }
 
     function sampleIndices(length) {
       if (length <= MAX_RENDER_POINTS) return Array.from({ length }, (_, i) => i);
@@ -403,6 +410,7 @@
         complete(result) {
           const fields = result.meta.fields || [];
           const rows = result.data || [];
+          const name = fileDisplayName(file);
           const rawTimes = rows.map(row => Number(row.t)).filter(Number.isFinite);
           const startTime = rawTimes.length ? rawTimes[0] : 0;
           const duration = rawTimes.length > 1 ? rawTimes[rawTimes.length - 1] - startTime : 0;
@@ -422,7 +430,7 @@
               x: selected.map(({ row }) => Number(row[columns[0]])),
               y: selected.map(({ row }) => Number(row[columns[1]])),
               z: selected.map(({ row }) => Number(row[columns[2]])),
-              customdata: selected.map(({ row, index }) => [row.t, index, file.name, group.label]),
+              customdata: selected.map(({ row, index }) => [row.t, index, name, group.label]),
               hovertemplate: "%{customdata[2]}<br>%{customdata[3]}<br>t=%{customdata[0]:.3f}s<br>x=%{x:.4f}<br>y=%{y:.4f}<br>z=%{z:.4f}<extra></extra>",
               line: { color: group.color, width: group.key.includes("tcp") ? 3 : 2, dash: group.key.includes("tcp") ? "solid" : "dot" },
               opacity: group.key.includes("tcp") ? 0.28 : 0.48,
@@ -430,6 +438,8 @@
             });
           }
           const tcpSeries = {};
+          const hasTcpPositionColumns = side => ["x", "y", "z"].every(axis => fields.includes(`${side}_tcp_pos_${axis}`));
+          const tcpPositionSides = ["right", "left"].filter(hasTcpPositionColumns);
           for (const side of ["right", "left"]) {
             const series = buildTcpSeries(rows, fields, side, startTime);
             if (series) tcpSeries[side] = series;
@@ -437,12 +447,15 @@
           const parseErrors = result.errors.filter(item => item.code !== "UndetectableDelimiter");
           const frame = frames[0] || "未知";
           resolve({
-            name: file.name, traces, tcpSeries, duration, frame, rows: rows.length,
-            summary: { name: file.name, rows: rows.length, duration, frame, groups: traces.length },
-            error: traces.length ? (parseErrors.length ? `${file.name}: 忽略 ${parseErrors.length} 个格式问题` : null) : `${file.name}: No usable XYZ trajectories`
+            name, traces, tcpSeries, tcpPositionSides, duration, frame, rows: rows.length,
+            summary: { name, rows: rows.length, duration, frame, groups: traces.length },
+            error: traces.length ? (parseErrors.length ? `${name}: 忽略 ${parseErrors.length} 个格式问题` : null) : `${name}: No usable XYZ trajectories`
           });
         },
-        error(reason) { resolve({ name: file.name, traces: [], tcpSeries: {}, duration: 0, rows: 0, error: `${file.name}: ${reason.message || reason}` }); }
+        error(reason) {
+          const name = fileDisplayName(file);
+          resolve({ name, traces: [], tcpSeries: {}, tcpPositionSides: [], duration: 0, rows: 0, error: `${name}: ${reason.message || reason}` });
+        }
       }));
     }
 
@@ -512,6 +525,11 @@
       }, { responsive: true, displaylogo: false, scrollZoom: true });
       timeSlider.disabled = activeEpisode.duration <= 0;
       playButton.disabled = !Object.keys(activeEpisode.tcpSeries).length || activeEpisode.duration <= 0;
+      for (const [side, toggle] of [["right", rightToggle], ["left", leftToggle]]) {
+        const available = activeEpisode.traces.some(trace => trace.meta && trace.meta.side === side);
+        toggle.disabled = !available;
+        toggle.checked = available;
+      }
       emptyState.hidden = currentTraces.length > 0;
       resetButton.disabled = currentTraces.length === 0;
       renderAnimationFrame(0);
@@ -586,15 +604,25 @@
     }
 
     async function enhancedLoadFiles(files) {
-      const csvFiles = Array.from(files).filter(file => file.name.toLowerCase().endsWith(".csv"));
+      const csvFiles = Array.from(files)
+        .filter(file => file.name.toLowerCase().endsWith(".csv"))
+        .sort((a, b) => fileDisplayName(a).localeCompare(fileDisplayName(b), "zh-CN", { numeric: true, sensitivity: "base" }));
+      if (!csvFiles.length) {
+        parseStatus.textContent = "所选内容中没有 CSV 文件。";
+        return;
+      }
       pauseAnimation(); loadedEpisodes = []; summaries = []; errors = [];
-      parseStatus.textContent = csvFiles.length ? `正在解析 ${csvFiles.length} 个文件…` : "请选择 CSV 文件。";
+      parseStatus.textContent = `正在解析 ${csvFiles.length} 个文件…`;
       const results = await Promise.all(csvFiles.map(enhancedParseFile));
       loadedEpisodes = results.filter(result => result.traces.length);
       summaries = loadedEpisodes.map(result => result.summary);
       errors = results.flatMap(result => {
         const notices = result.error ? [result.error] : [];
-        for (const side of ["right", "left"]) if (!result.tcpSeries[side]) notices.push(`${result.name}: ${side === "right" ? "右" : "左"} TCP 缺少有效四元数，无法动画`);
+        for (const side of ["right", "left"]) {
+          if (result.tcpPositionSides.includes(side) && !result.tcpSeries[side]) {
+            notices.push(`${result.name}: ${side === "right" ? "右" : "左"} TCP 缺少有效四元数，无法动画`);
+          }
+        }
         return notices;
       });
       renderSidebar();
@@ -606,6 +634,7 @@
 
     parseFile = enhancedParseFile;
     loadFiles = enhancedLoadFiles;
+    folderInput.addEventListener("change", event => loadFiles(event.target.files));
     episodeSelect.addEventListener("change", event => renderActiveEpisode(Number(event.target.value)));
     playButton.addEventListener("click", toggleAnimation);
     timeSlider.addEventListener("input", event => {

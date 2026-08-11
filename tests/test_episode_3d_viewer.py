@@ -64,7 +64,8 @@ def test_viewer_has_desktop_equivalent_animation_controls():
 
 
 def test_public_repository_excludes_internal_docs_and_deploys_pages():
-    assert not (ROOT / "docs").exists()
+    docs = ROOT / "docs"
+    assert not docs.exists() or not any(path.is_file() for path in docs.rglob("*"))
     workflow = ROOT / ".github" / "workflows" / "pages.yml"
     source = workflow.read_text(encoding="utf-8")
     assert "actions/deploy-pages" in source
@@ -111,3 +112,21 @@ def test_tcp_tool_axes_have_shared_xyz_legend_entries():
     assert 'legendgroup: `tool-axis-${axis}`' in source
     assert 'showlegend: !axisLegendAdded' in source
     assert 'groupclick: "togglegroup"' in source
+
+
+def test_viewer_accepts_individual_files_and_folders():
+    source = viewer_source()
+    assert 'id="folder-input"' in source
+    assert 'webkitdirectory' in source
+    assert 'for="folder-input"' in source
+    assert "file.webkitRelativePath" in source
+    assert 'localeCompare' in source
+    assert 'numeric: true' in source
+
+
+def test_single_arm_episodes_do_not_report_the_absent_arm_as_invalid():
+    source = viewer_source()
+    assert "hasTcpPositionColumns" in source
+    assert "tcpPositionSides" in source
+    assert "result.tcpPositionSides.includes(side)" in source
+    assert "toggle.disabled = !available" in source
