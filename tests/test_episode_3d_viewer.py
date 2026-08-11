@@ -141,3 +141,14 @@ def test_loaded_file_list_scrolls_without_horizontal_overflow():
     assert "scrollbar-gutter: stable" in source
     assert "box-sizing: border-box" in source
     assert ".file-card { min-width: 0; width: 100%; box-sizing: border-box;" in source
+
+
+def test_loaded_file_cards_select_and_highlight_the_active_episode():
+    source = viewer_source()
+    assert 'class="file-card"' in source
+    assert 'data-episode-index="${index}"' in source
+    assert 'aria-current="${activeEpisodeIndex === index}"' in source
+    assert 'fileList.addEventListener("click"' in source
+    assert "episodeSelect.value = String(index)" in source
+    assert 'scrollIntoView({ block: "nearest", inline: "nearest" })' in source
+    assert '.file-card[aria-current="true"]' in source

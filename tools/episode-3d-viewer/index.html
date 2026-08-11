@@ -99,6 +99,8 @@
       scrollbar-gutter: stable;
     }
     .file-card { min-width: 0; width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+    .file-card { display: block; height: auto; color: var(--ink); text-align: left; }
+    .file-card[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
     .file-card strong { display: block; width: 100%; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
     .file-card span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
     #error-list:empty { display: none; }
@@ -215,6 +217,7 @@
     let currentTraces = [];
     let summaries = [];
     let errors = [];
+    let activeEpisodeIndex = -1;
 
     function fileDisplayName(file) {
       return file.webkitRelativePath || file.name;
@@ -273,12 +276,12 @@
     }
 
     function renderSidebar() {
-      fileList.innerHTML = summaries.length ? summaries.map(item => `
-        <div class="file-card">
+      fileList.innerHTML = summaries.length ? summaries.map((item, index) => `
+        <button type="button" class="file-card" data-episode-index="${index}" aria-current="${activeEpisodeIndex === index}">
           <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
           <span>${item.rows.toLocaleString()} 点 · ${item.duration.toFixed(2)} 秒 · ${escapeHtml(item.frame)}</span>
           <span>${item.groups} 条可用轨迹</span>
-        </div>`).join("") : '<span style="color:var(--muted);font-size:13px">尚未载入</span>';
+        </button>`).join("") : '<span style="color:var(--muted);font-size:13px">尚未载入</span>';
       errorList.innerHTML = errors.map(item => `<div>${escapeHtml(item)}</div>`).join("");
     }
 
@@ -521,6 +524,7 @@
     async function renderActiveEpisode(index) {
       pauseAnimation();
       activeEpisode = loadedEpisodes[index] || null;
+      activeEpisodeIndex = activeEpisode ? index : -1;
       playbackTime = 0;
       if (!activeEpisode) return;
       currentTraces = [...activeEpisode.traces, ...animationTraces(activeEpisode)];
@@ -546,6 +550,11 @@
       resetButton.disabled = currentTraces.length === 0;
       renderAnimationFrame(0);
       applyArmVisibility();
+      renderSidebar();
+      requestAnimationFrame(() => {
+        const card = fileList.querySelector(`[data-episode-index="${index}"]`);
+        if (card) card.scrollIntoView({ block: "nearest", inline: "nearest" });
+      });
     }
 
     function renderAnimationFrame(time) {
@@ -648,6 +657,13 @@
     loadFiles = enhancedLoadFiles;
     folderInput.addEventListener("change", event => loadFiles(event.target.files));
     episodeSelect.addEventListener("change", event => renderActiveEpisode(Number(event.target.value)));
+    fileList.addEventListener("click", event => {
+      const card = event.target.closest(".file-card[data-episode-index]");
+      if (!card) return;
+      const index = Number(card.dataset.episodeIndex);
+      episodeSelect.value = String(index);
+      renderActiveEpisode(index);
+    });
     playButton.addEventListener("click", toggleAnimation);
     timeSlider.addEventListener("input", event => {
       pauseAnimation();
