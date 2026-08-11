@@ -1,0 +1,6 @@
+t,coordinate_frame,right_tcp_pos_x,right_tcp_pos_y,right_tcp_pos_z,right_tcp_quat_w,right_tcp_quat_x,right_tcp_quat_y,right_tcp_quat_z,left_tcp_pos_x,left_tcp_pos_y,left_tcp_pos_z,left_tcp_quat_w,left_tcp_quat_x,left_tcp_quat_y,left_tcp_quat_z
+0.0,demo_world,0.30,-0.20,0.10,1.0,0.0,0.0,0.0,0.30,0.20,0.10,1.0,0.0,0.0,0.0
+0.5,demo_world,0.34,-0.16,0.14,0.9808,0.0,0.0,0.1951,0.34,0.16,0.15,0.9808,0.0,0.0,-0.1951
+1.0,demo_world,0.39,-0.12,0.18,0.9239,0.0,0.0,0.3827,0.39,0.12,0.19,0.9239,0.0,0.0,-0.3827
+1.5,demo_world,0.44,-0.08,0.15,0.8315,0.0,0.0,0.5556,0.44,0.08,0.16,0.8315,0.0,0.0,-0.5556
+2.0,demo_world,0.48,-0.04,0.11,0.7071,0.0,0.0,0.7071,0.48,0.04,0.12,0.7071,0.0,0.0,-0.7071

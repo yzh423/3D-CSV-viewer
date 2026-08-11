@@ -1,0 +1,25 @@
+name: Build Windows app
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pyinstaller
+      - run: pyinstaller --noconfirm --clean --windowed --name 3D-CSV-viewer scripts/episode_3d_desktop.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 3D-CSV-viewer-windows
+          path: dist/3D-CSV-viewer/
