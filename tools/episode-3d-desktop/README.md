@@ -4,7 +4,7 @@
 
 ## 启动
 
-Windows 双击 `run_viewer.bat`；Apple Silicon Mac 双击 `run_viewer.command`。然后点击“打开 CSV”。也可以在项目根目录直接加载指定 episode：
+Windows 双击 `run_viewer.bat`；首次运行会自动创建 `.venv` 并安装所需依赖，不要求系统 Python 预装 PySide6。Apple Silicon Mac 双击 `run_viewer.command`。然后点击“打开 CSV”。也可以在项目根目录直接加载指定 episode：
 
 ```powershell
 python scripts/episode_3d_desktop.py examples/demo_episode.csv

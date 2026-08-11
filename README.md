@@ -12,7 +12,7 @@ Open-source tools for inspecting robot TCP and controller trajectories stored in
 - Draws the moving TCP tool frame from `*_tcp_quat_w/x/y/z`: X red, Y green, Z blue.
 - Includes play/pause, timeline scrubbing, `0.25×–4×` speed, looping, per-arm visibility, 3D rotation, pan, and zoom.
 
-Windows users can double-click [`tools/episode-3d-desktop/run_viewer.bat`](tools/episode-3d-desktop/run_viewer.bat). Apple Silicon Mac users can double-click [`tools/episode-3d-desktop/run_viewer.command`](tools/episode-3d-desktop/run_viewer.command) after installing the dependencies below. Cross-platform launch:
+Windows users can double-click [`tools/episode-3d-desktop/run_viewer.bat`](tools/episode-3d-desktop/run_viewer.bat). On first launch it creates an isolated `.venv` and installs PySide6, Matplotlib, and NumPy automatically. Apple Silicon Mac users can double-click [`tools/episode-3d-desktop/run_viewer.command`](tools/episode-3d-desktop/run_viewer.command) after installing the dependencies below. Cross-platform launch:
 
 ```bash
 python -m venv .venv

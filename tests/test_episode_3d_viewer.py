@@ -85,3 +85,10 @@ def test_repository_has_apple_silicon_launcher_and_build_workflow():
     assert "macos-latest" in source
     assert "--target-arch arm64" in source
     assert "3D-CSV-viewer.app" in source
+
+
+def test_windows_launcher_bootstraps_an_isolated_environment():
+    launcher = (ROOT / "tools" / "episode-3d-desktop" / "run_viewer.bat").read_text(encoding="utf-8")
+    assert ".venv\\Scripts\\python.exe" in launcher
+    assert "-m venv .venv" in launcher
+    assert "-m pip install -r requirements.txt" in launcher
