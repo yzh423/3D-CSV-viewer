@@ -218,6 +218,26 @@
     let summaries = [];
     let errors = [];
     let activeEpisodeIndex = -1;
+    let savedCamera = null;
+
+    function copyCamera(camera) {
+      return camera ? JSON.parse(JSON.stringify(camera)) : null;
+    }
+
+    function rememberCurrentCamera() {
+      const camera = plot._fullLayout && plot._fullLayout.scene && plot._fullLayout.scene.camera;
+      if (camera) savedCamera = copyCamera(camera);
+    }
+
+    function sceneWithSavedCamera(scene) {
+      return savedCamera ? { ...scene, camera: copyCamera(savedCamera) } : scene;
+    }
+
+    async function resetCameraView() {
+      savedCamera = null;
+      await Plotly.relayout(plot, { "scene.camera": null });
+      savedCamera = null;
+    }
 
     function fileDisplayName(file) {
       return file.webkitRelativePath || file.name;
@@ -310,14 +330,14 @@
         paper_bgcolor: "#ffffff",
         plot_bgcolor: "#ffffff",
         legend: { orientation: "h", x: 0.02, y: 1.02, bgcolor: "rgba(255,255,255,.85)" },
-        scene: {
+        scene: sceneWithSavedCamera({
           aspectmode: "data",
           xaxis: { title: "X (m)", gridcolor: "#e3e7e4", zerolinecolor: "#aab5af" },
           yaxis: { title: "Y (m)", gridcolor: "#e3e7e4", zerolinecolor: "#aab5af" },
           zaxis: { title: "Z (m)", gridcolor: "#e3e7e4", zerolinecolor: "#aab5af" },
           bgcolor: "#fbfcfa"
-        },
-        uirevision: "episode-view"
+        }),
+        uirevision: "persistent-camera"
       }, { responsive: true, displaylogo: false, scrollZoom: true });
     }
 
@@ -339,7 +359,12 @@
       event.preventDefault(); dropZone.classList.remove("dragging");
     }));
     dropZone.addEventListener("drop", event => loadFiles(event.dataTransfer.files));
-    resetButton.addEventListener("click", () => Plotly.relayout(plot, { "scene.camera": null }));
+    resetButton.addEventListener("click", resetCameraView);
+    plot.on("plotly_relayout", event => {
+      if (Object.keys(event || {}).some(key => key.startsWith("scene.camera"))) {
+        requestAnimationFrame(rememberCurrentCamera);
+      }
+    });
     plot.on("plotly_click", event => {
       const point = event.points[0];
       if (!point || !point.customdata) return;
@@ -523,6 +548,7 @@
 
     async function renderActiveEpisode(index) {
       pauseAnimation();
+      rememberCurrentCamera();
       activeEpisode = loadedEpisodes[index] || null;
       activeEpisodeIndex = activeEpisode ? index : -1;
       playbackTime = 0;
@@ -532,12 +558,12 @@
       await Plotly.react(plot, currentTraces, {
         margin: { l: 0, r: 0, t: 32, b: 0 }, paper_bgcolor: "#fff", plot_bgcolor: "#fff",
         legend: { orientation: "h", x: 0.02, y: 1.02, bgcolor: "rgba(255,255,255,.85)", groupclick: "togglegroup" },
-        scene: {
+        scene: sceneWithSavedCamera({
           aspectmode: "data", bgcolor: "#fbfcfa",
           xaxis: { title: "X (m)", gridcolor: "#e3e7e4", autorange: false, range: activeEpisode.sceneRanges[0] },
           yaxis: { title: "Y (m)", gridcolor: "#e3e7e4", autorange: false, range: activeEpisode.sceneRanges[1] },
           zaxis: { title: "Z (m)", gridcolor: "#e3e7e4", autorange: false, range: activeEpisode.sceneRanges[2] }
-        }, uirevision: `episode-${index}`
+        }), uirevision: "persistent-camera"
       }, { responsive: true, displaylogo: false, scrollZoom: true });
       timeSlider.disabled = activeEpisode.duration <= 0;
       playButton.disabled = !Object.keys(activeEpisode.tcpSeries).length || activeEpisode.duration <= 0;
@@ -608,6 +634,7 @@
     function toggleAnimation() {
       if (playing) return pauseAnimation();
       if (!activeEpisode) return;
+      rememberCurrentCamera();
       if (playbackTime >= activeEpisode.duration) renderAnimationFrame(0);
       playing = true; playButton.textContent = "暂停";
       animationRequest = requestAnimationFrame(animationLoop);
@@ -676,7 +703,10 @@
     function finishCameraInteraction() {
       if (!userInteracting) return;
       userInteracting = false;
-      requestAnimationFrame(() => { if (activeEpisode) renderAnimationFrame(playbackTime); });
+      requestAnimationFrame(() => {
+        rememberCurrentCamera();
+        if (activeEpisode) renderAnimationFrame(playbackTime);
+      });
     }
     document.addEventListener("mouseup", finishCameraInteraction);
     document.addEventListener("touchend", finishCameraInteraction, { passive: true });

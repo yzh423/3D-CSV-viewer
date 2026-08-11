@@ -152,3 +152,15 @@ def test_loaded_file_cards_select_and_highlight_the_active_episode():
     assert "episodeSelect.value = String(index)" in source
     assert 'scrollIntoView({ block: "nearest", inline: "nearest" })' in source
     assert '.file-card[aria-current="true"]' in source
+
+
+def test_camera_persists_until_the_explicit_reset_button_is_used():
+    source = viewer_source()
+    assert "let savedCamera = null" in source
+    assert "rememberCurrentCamera" in source
+    assert 'plot.on("plotly_relayout"' in source
+    assert 'uirevision: "persistent-camera"' in source
+    assert "sceneWithSavedCamera" in source
+    assert "resetCameraView" in source
+    assert "savedCamera = null" in source
+    assert "`episode-${index}`" not in source
