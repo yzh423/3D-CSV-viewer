@@ -46,7 +46,7 @@
       grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);
       min-height: calc(100vh - 91px);
     }
-    aside { padding: 20px; border-right: 1px solid var(--border); background: var(--panel); }
+    aside { min-width: 0; padding: 20px; border-right: 1px solid var(--border); background: var(--panel); }
     #drop-zone {
       display: grid;
       place-items: center;
@@ -86,9 +86,20 @@
     button:hover, .file-button:hover { filter: brightness(.97); }
     button:focus-visible, .file-button:focus-visible { outline: 3px solid #8cc9ba; outline-offset: 2px; }
     aside h2 { margin: 24px 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-    #file-list { display: grid; gap: 8px; }
-    .file-card { padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
-    .file-card strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    #file-list {
+      display: grid;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      max-height: clamp(220px, 35vh, 420px);
+      gap: 8px;
+      padding-right: 4px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+    }
+    .file-card { min-width: 0; width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+    .file-card strong { display: block; width: 100%; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
     .file-card span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
     #error-list:empty { display: none; }
     #error-list { margin-top: 14px; padding: 10px 12px; border: 1px solid #edc6c2; border-radius: 6px; background: var(--danger-soft); color: var(--danger); font-size: 12px; }
@@ -115,6 +126,7 @@
       main { display: block; }
       aside { border-right: 0; border-bottom: 1px solid var(--border); }
       #drop-zone { min-height: 112px; }
+      #file-list { max-height: min(300px, 38vh); }
       .workspace, #plot { min-height: 520px; height: 65vh; }
     }
   </style>

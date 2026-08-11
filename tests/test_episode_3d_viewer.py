@@ -130,3 +130,14 @@ def test_single_arm_episodes_do_not_report_the_absent_arm_as_invalid():
     assert "tcpPositionSides" in source
     assert "result.tcpPositionSides.includes(side)" in source
     assert "toggle.disabled = !available" in source
+
+
+def test_loaded_file_list_scrolls_without_horizontal_overflow():
+    source = viewer_source()
+    assert "#file-list" in source
+    assert "max-height: clamp(" in source
+    assert "overflow-y: auto" in source
+    assert "overflow-x: hidden" in source
+    assert "scrollbar-gutter: stable" in source
+    assert "box-sizing: border-box" in source
+    assert ".file-card { min-width: 0; width: 100%; box-sizing: border-box;" in source
