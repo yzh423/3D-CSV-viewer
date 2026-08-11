@@ -48,6 +48,29 @@ def test_viewer_includes_camera_reset_and_empty_error_states():
     assert "No usable XYZ trajectories" in source
 
 
+def test_viewer_has_desktop_equivalent_animation_controls():
+    source = viewer_source()
+    for control_id in (
+        "episode-select", "play-button", "time-slider", "time-label",
+        "speed-select", "loop-toggle", "right-toggle", "left-toggle",
+    ):
+        assert f'id="{control_id}"' in source
+    for behavior in (
+        "quaternionToMatrix", "nearestIndex", "requestAnimationFrame",
+        "renderAnimationFrame", "AXIS_COLORS",
+    ):
+        assert behavior in source
+    assert "_tcp_quat_w" in source
+
+
+def test_public_repository_excludes_internal_docs_and_deploys_pages():
+    assert not (ROOT / "docs").exists()
+    workflow = ROOT / ".github" / "workflows" / "pages.yml"
+    source = workflow.read_text(encoding="utf-8")
+    assert "actions/deploy-pages" in source
+    assert "tools/episode-3d-viewer" in source
+
+
 def test_plot_is_initialized_before_plotly_event_binding():
     source = viewer_source()
     assert source.index("Plotly.newPlot") < source.index('plot.on("plotly_click"')

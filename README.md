@@ -34,6 +34,8 @@ Open [`tools/episode-3d-viewer/index.html`](tools/episode-3d-viewer/index.html) 
 
 直接打开 `tools/episode-3d-viewer/index.html`，拖入一个或多个 CSV。所有解析均在本机完成，数据不会上传。
 
+The browser viewer also animates both TCP tool frames with the same controls as the desktop app: episode selection, play/pause, timeline scrubbing, speed, looping, and per-arm visibility. A GitHub Pages deployment is built automatically from `tools/episode-3d-viewer`.
+
 ## Supported CSV schema / CSV 字段
 
 The timeline column is `t`. The viewer detects any complete group below:
