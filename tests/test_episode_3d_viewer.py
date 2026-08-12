@@ -164,3 +164,13 @@ def test_camera_persists_until_the_explicit_reset_button_is_used():
     assert "resetCameraView" in source
     assert "savedCamera = null" in source
     assert "`episode-${index}`" not in source
+
+
+def test_camera_relayout_is_saved_synchronously_without_mouseup_redraw_race():
+    source = viewer_source()
+    assert "saveCameraFromRelayout" in source
+    assert 'event["scene.camera"]' in source
+    assert 'savedCamera = copyCamera(event["scene.camera"])' in source
+    assert "requestAnimationFrame(rememberCurrentCamera)" not in source
+    finish = source[source.index("function finishCameraInteraction"):source.index('document.addEventListener("mouseup"')]
+    assert "renderAnimationFrame" not in finish

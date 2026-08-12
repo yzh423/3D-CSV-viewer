@@ -229,6 +229,23 @@
       if (camera) savedCamera = copyCamera(camera);
     }
 
+    function saveCameraFromRelayout(event) {
+      if (event && event["scene.camera"]) {
+        savedCamera = copyCamera(event["scene.camera"]);
+        return;
+      }
+      const cameraParts = Object.entries(event || {}).filter(([key]) => key.startsWith("scene.camera."));
+      if (!cameraParts.length) return;
+      const nextCamera = copyCamera(savedCamera) || copyCamera(plot._fullLayout.scene.camera);
+      for (const [key, value] of cameraParts) {
+        const path = key.slice("scene.camera.".length).split(".");
+        let target = nextCamera;
+        for (const part of path.slice(0, -1)) target = target[part] ||= {};
+        target[path.at(-1)] = value;
+      }
+      savedCamera = nextCamera;
+    }
+
     function sceneWithSavedCamera(scene) {
       return savedCamera ? { ...scene, camera: copyCamera(savedCamera) } : scene;
     }
@@ -362,7 +379,7 @@
     resetButton.addEventListener("click", resetCameraView);
     plot.on("plotly_relayout", event => {
       if (Object.keys(event || {}).some(key => key.startsWith("scene.camera"))) {
-        requestAnimationFrame(rememberCurrentCamera);
+        saveCameraFromRelayout(event);
       }
     });
     plot.on("plotly_click", event => {
@@ -703,10 +720,7 @@
     function finishCameraInteraction() {
       if (!userInteracting) return;
       userInteracting = false;
-      requestAnimationFrame(() => {
-        rememberCurrentCamera();
-        if (activeEpisode) renderAnimationFrame(playbackTime);
-      });
+      rememberCurrentCamera();
     }
     document.addEventListener("mouseup", finishCameraInteraction);
     document.addEventListener("touchend", finishCameraInteraction, { passive: true });
