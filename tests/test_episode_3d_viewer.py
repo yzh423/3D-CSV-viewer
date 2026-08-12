@@ -23,6 +23,11 @@ def test_viewer_has_accessible_local_file_controls():
     assert 'role="alert"' in source
 
 
+def test_offline_plotly_runtime_is_current_enough_for_stable_gl3d_camera_updates():
+    plotly = (VIEWER.parent / "vendor" / "plotly.min.js").read_text(encoding="utf-8")
+    assert "plotly.js v3.7.0" in plotly[:200]
+
+
 def test_viewer_supports_expected_trajectory_groups():
     source = viewer_source()
     for prefix in ("right_controller", "right_tcp", "left_controller", "left_tcp"):
