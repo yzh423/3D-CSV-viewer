@@ -251,12 +251,6 @@
       return savedCamera ? { ...persistentScene, camera: copyCamera(savedCamera) } : persistentScene;
     }
 
-    function cameraPreservingRestyle(update, indices) {
-      const camera = copyCamera(savedCamera) || copyCamera(plot._fullLayout.scene.camera);
-      Plotly.restyle(plot, update, indices);
-      if (camera) Plotly.relayout(plot, { "scene.camera": camera });
-    }
-
     async function resetCameraView() {
       savedCamera = null;
       await Plotly.relayout(plot, { "scene.camera": null });
@@ -426,9 +420,20 @@
     let userInteracting = false;
     const CAMERA_SETTLE_MS = 180;
     let cameraSettlingUntil = 0;
+    const ANIMATION_FRAME_INTERVAL_MS = 1000 / 30;
+    let animationRestylePending = false;
+    let lastAnimationRestyleAt = 0;
 
     function extendCameraSettleWindow() {
       cameraSettlingUntil = performance.now() + CAMERA_SETTLE_MS;
+    }
+
+    function scheduleAnimationRestyle(update, indices) {
+      const now = performance.now();
+      if (animationRestylePending || now - lastAnimationRestyleAt < ANIMATION_FRAME_INTERVAL_MS) return;
+      animationRestylePending = true;
+      lastAnimationRestyleAt = now;
+      Promise.resolve(Plotly.restyle(plot, update, indices)).finally(() => { animationRestylePending = false; });
     }
 
     function quaternionToMatrix(quaternion) {
@@ -635,7 +640,7 @@
           indices.push(traceIndices[axis + 2]); xs.push([origin[0], endpoint[0]]); ys.push([origin[1], endpoint[1]]); zs.push([origin[2], endpoint[2]]);
         }
       }
-      if (indices.length) cameraPreservingRestyle({ x: xs, y: ys, z: zs }, indices);
+      if (indices.length) scheduleAnimationRestyle({ x: xs, y: ys, z: zs }, indices);
       timeSlider.value = activeEpisode.duration ? Math.round(playbackTime / activeEpisode.duration * 10000) : 0;
       timeLabel.textContent = `${playbackTime.toFixed(2)} / ${activeEpisode.duration.toFixed(2)} s`;
     }
