@@ -192,3 +192,12 @@ def test_animation_waits_for_camera_to_settle_after_dragging():
     assert "extendCameraSettleWindow" in source
     assert "now < cameraSettlingUntil" in source
     assert "performance.now() + CAMERA_SETTLE_MS" in source
+
+
+def test_each_animation_update_explicitly_preserves_the_3d_scene_camera():
+    source = viewer_source()
+    assert 'uirevision: "persistent-camera"' in source
+    assert "cameraPreservingRestyle" in source
+    assert 'Plotly.relayout(plot, { "scene.camera": camera })' in source
+    animation = source[source.index("function renderAnimationFrame"):source.index("function animationLoop")]
+    assert "cameraPreservingRestyle" in animation

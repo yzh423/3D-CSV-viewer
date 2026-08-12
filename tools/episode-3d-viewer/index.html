@@ -247,7 +247,14 @@
     }
 
     function sceneWithSavedCamera(scene) {
-      return savedCamera ? { ...scene, camera: copyCamera(savedCamera) } : scene;
+      const persistentScene = { ...scene, uirevision: "persistent-camera" };
+      return savedCamera ? { ...persistentScene, camera: copyCamera(savedCamera) } : persistentScene;
+    }
+
+    function cameraPreservingRestyle(update, indices) {
+      const camera = copyCamera(savedCamera) || copyCamera(plot._fullLayout.scene.camera);
+      Plotly.restyle(plot, update, indices);
+      if (camera) Plotly.relayout(plot, { "scene.camera": camera });
     }
 
     async function resetCameraView() {
@@ -628,7 +635,7 @@
           indices.push(traceIndices[axis + 2]); xs.push([origin[0], endpoint[0]]); ys.push([origin[1], endpoint[1]]); zs.push([origin[2], endpoint[2]]);
         }
       }
-      if (indices.length) Plotly.restyle(plot, { x: xs, y: ys, z: zs }, indices);
+      if (indices.length) cameraPreservingRestyle({ x: xs, y: ys, z: zs }, indices);
       timeSlider.value = activeEpisode.duration ? Math.round(playbackTime / activeEpisode.duration * 10000) : 0;
       timeLabel.textContent = `${playbackTime.toFixed(2)} / ${activeEpisode.duration.toFixed(2)} s`;
     }
