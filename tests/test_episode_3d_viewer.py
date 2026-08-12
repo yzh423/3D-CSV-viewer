@@ -102,7 +102,7 @@ def test_animation_locks_ranges_and_yields_to_camera_interaction():
     assert "userInteracting" in source
     assert 'plot.addEventListener("mousedown"' in source
     assert 'document.addEventListener("mouseup"' in source
-    assert "if (userInteracting)" in source
+    assert "if (userInteracting || now < cameraSettlingUntil)" in source
 
 
 def test_tcp_tool_axes_have_shared_xyz_legend_entries():
@@ -174,3 +174,21 @@ def test_camera_relayout_is_saved_synchronously_without_mouseup_redraw_race():
     assert "requestAnimationFrame(rememberCurrentCamera)" not in source
     finish = source[source.index("function finishCameraInteraction"):source.index('document.addEventListener("mouseup"')]
     assert "renderAnimationFrame" not in finish
+
+
+def test_new_file_batches_append_and_keep_every_loaded_episode():
+    source = viewer_source()
+    assert "episodeIdentity" in source
+    assert "const previousEpisodes = loadedEpisodes" in source
+    assert "loadedEpisodes = [...previousEpisodes" in source
+    load = source[source.index("async function enhancedLoadFiles"):source.index("parseFile = enhancedParseFile")]
+    assert "loadedEpisodes = []" not in load
+
+
+def test_animation_waits_for_camera_to_settle_after_dragging():
+    source = viewer_source()
+    assert "cameraSettlingUntil" in source
+    assert "CAMERA_SETTLE_MS" in source
+    assert "extendCameraSettleWindow" in source
+    assert "now < cameraSettlingUntil" in source
+    assert "performance.now() + CAMERA_SETTLE_MS" in source

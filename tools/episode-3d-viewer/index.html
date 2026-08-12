@@ -260,6 +260,10 @@
       return file.webkitRelativePath || file.name;
     }
 
+    function episodeIdentity(file) {
+      return [fileDisplayName(file), file.size, file.lastModified].join("::");
+    }
+
     function sampleIndices(length) {
       if (length <= MAX_RENDER_POINTS) return Array.from({ length }, (_, i) => i);
       const stride = (length - 1) / (MAX_RENDER_POINTS - 1);
@@ -380,6 +384,7 @@
     plot.on("plotly_relayout", event => {
       if (Object.keys(event || {}).some(key => key.startsWith("scene.camera"))) {
         saveCameraFromRelayout(event);
+        extendCameraSettleWindow();
       }
     });
     plot.on("plotly_click", event => {
@@ -412,6 +417,12 @@
     let animationRequest = null;
     let previousFrameAt = 0;
     let userInteracting = false;
+    const CAMERA_SETTLE_MS = 180;
+    let cameraSettlingUntil = 0;
+
+    function extendCameraSettleWindow() {
+      cameraSettlingUntil = performance.now() + CAMERA_SETTLE_MS;
+    }
 
     function quaternionToMatrix(quaternion) {
       const [w0, x0, y0, z0] = quaternion.map(Number);
@@ -504,14 +515,14 @@
           const parseErrors = result.errors.filter(item => item.code !== "UndetectableDelimiter");
           const frame = frames[0] || "未知";
           resolve({
-            name, traces, tcpSeries, tcpPositionSides, duration, frame, rows: rows.length,
+            id: episodeIdentity(file), name, traces, tcpSeries, tcpPositionSides, duration, frame, rows: rows.length,
             summary: { name, rows: rows.length, duration, frame, groups: traces.length },
             error: traces.length ? (parseErrors.length ? `${name}: 忽略 ${parseErrors.length} 个格式问题` : null) : `${name}: No usable XYZ trajectories`
           });
         },
         error(reason) {
           const name = fileDisplayName(file);
-          resolve({ name, traces: [], tcpSeries: {}, tcpPositionSides: [], duration: 0, rows: 0, error: `${name}: ${reason.message || reason}` });
+          resolve({ id: episodeIdentity(file), name, traces: [], tcpSeries: {}, tcpPositionSides: [], duration: 0, rows: 0, error: `${name}: ${reason.message || reason}` });
         }
       }));
     }
@@ -632,7 +643,7 @@
         if (loopToggle.checked) next %= Math.max(activeEpisode.duration, 1e-9);
         else { next = activeEpisode.duration; pauseAnimation(); }
       }
-      if (userInteracting) {
+      if (userInteracting || now < cameraSettlingUntil) {
         playbackTime = next;
         timeSlider.value = activeEpisode.duration ? Math.round(playbackTime / activeEpisode.duration * 10000) : 0;
         timeLabel.textContent = `${playbackTime.toFixed(2)} / ${activeEpisode.duration.toFixed(2)} s`;
@@ -676,12 +687,15 @@
         parseStatus.textContent = "所选内容中没有 CSV 文件。";
         return;
       }
-      pauseAnimation(); loadedEpisodes = []; summaries = []; errors = [];
+      pauseAnimation();
+      const previousEpisodes = loadedEpisodes;
+      const previousIds = new Set(previousEpisodes.map(episode => episode.id));
       parseStatus.textContent = `正在解析 ${csvFiles.length} 个文件…`;
       const results = await Promise.all(csvFiles.map(enhancedParseFile));
-      loadedEpisodes = results.filter(result => result.traces.length);
+      const newEpisodes = results.filter(result => result.traces.length && !previousIds.has(result.id));
+      loadedEpisodes = [...previousEpisodes, ...newEpisodes];
       summaries = loadedEpisodes.map(result => result.summary);
-      errors = results.flatMap(result => {
+      const newErrors = results.flatMap(result => {
         const notices = result.error ? [result.error] : [];
         for (const side of ["right", "left"]) {
           if (result.tcpPositionSides.includes(side) && !result.tcpSeries[side]) {
@@ -690,11 +704,14 @@
         }
         return notices;
       });
+      errors = [...errors, ...newErrors];
       renderSidebar();
       episodeSelect.innerHTML = loadedEpisodes.length ? loadedEpisodes.map((episode, index) => `<option value="${index}">${escapeHtml(episode.name)}</option>`).join("") : "<option>尚未载入</option>";
       episodeSelect.disabled = loadedEpisodes.length === 0;
       parseStatus.textContent = loadedEpisodes.length ? `已载入 ${loadedEpisodes.length} 个 Episode。` : "未找到可绘制轨迹。";
-      await renderActiveEpisode(0);
+      const nextIndex = newEpisodes.length ? previousEpisodes.length : Math.max(activeEpisodeIndex, 0);
+      episodeSelect.value = String(nextIndex);
+      await renderActiveEpisode(nextIndex);
     }
 
     parseFile = enhancedParseFile;
@@ -715,12 +732,13 @@
     });
     rightToggle.addEventListener("change", applyArmVisibility);
     leftToggle.addEventListener("change", applyArmVisibility);
-    plot.addEventListener("mousedown", () => { userInteracting = true; });
-    plot.addEventListener("touchstart", () => { userInteracting = true; }, { passive: true });
+    plot.addEventListener("mousedown", () => { userInteracting = true; extendCameraSettleWindow(); });
+    plot.addEventListener("touchstart", () => { userInteracting = true; extendCameraSettleWindow(); }, { passive: true });
     function finishCameraInteraction() {
       if (!userInteracting) return;
       userInteracting = false;
       rememberCurrentCamera();
+      extendCameraSettleWindow();
     }
     document.addEventListener("mouseup", finishCameraInteraction);
     document.addEventListener("touchend", finishCameraInteraction, { passive: true });
