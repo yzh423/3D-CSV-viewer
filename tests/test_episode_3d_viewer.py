@@ -203,3 +203,15 @@ def test_animation_updates_never_write_an_old_camera_back_to_the_scene():
     assert 'Plotly.relayout(plot, { "scene.camera": camera })' not in source
     animation = source[source.index("function renderAnimationFrame"):source.index("function animationLoop")]
     assert "scheduleAnimationRestyle" in animation
+
+
+def test_mouse_release_waits_for_plotlys_final_camera_event_before_resuming():
+    source = viewer_source()
+    assert "cameraReleaseTimer" in source
+    assert "scheduleCameraInteractionFinish" in source
+    assert "clearTimeout(cameraReleaseTimer)" in source
+    assert "CAMERA_RELEASE_QUIET_MS" in source
+    finish = source[source.index("function finishCameraInteraction"):source.index('document.addEventListener("mouseup"')]
+    assert "userInteracting = false" not in finish
+    relayout = source[source.index('plot.on("plotly_relayout"'):source.index('plot.on("plotly_click"')]
+    assert "scheduleCameraInteractionFinish" in relayout

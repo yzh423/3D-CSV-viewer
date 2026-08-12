@@ -219,6 +219,9 @@
     let errors = [];
     let activeEpisodeIndex = -1;
     let savedCamera = null;
+    const CAMERA_RELEASE_QUIET_MS = 120;
+    let cameraReleaseTimer = null;
+    let pointerReleased = false;
 
     function copyCamera(camera) {
       return camera ? JSON.parse(JSON.stringify(camera)) : null;
@@ -244,6 +247,18 @@
         target[path.at(-1)] = value;
       }
       savedCamera = nextCamera;
+    }
+
+    function scheduleCameraInteractionFinish() {
+      if (!pointerReleased) return;
+      if (cameraReleaseTimer) clearTimeout(cameraReleaseTimer);
+      cameraReleaseTimer = setTimeout(() => {
+        rememberCurrentCamera();
+        userInteracting = false;
+        pointerReleased = false;
+        cameraReleaseTimer = null;
+        extendCameraSettleWindow();
+      }, CAMERA_RELEASE_QUIET_MS);
     }
 
     function sceneWithSavedCamera(scene) {
@@ -386,6 +401,7 @@
       if (Object.keys(event || {}).some(key => key.startsWith("scene.camera"))) {
         saveCameraFromRelayout(event);
         extendCameraSettleWindow();
+        scheduleCameraInteractionFinish();
       }
     });
     plot.on("plotly_click", event => {
@@ -744,13 +760,20 @@
     });
     rightToggle.addEventListener("change", applyArmVisibility);
     leftToggle.addEventListener("change", applyArmVisibility);
-    plot.addEventListener("mousedown", () => { userInteracting = true; extendCameraSettleWindow(); });
-    plot.addEventListener("touchstart", () => { userInteracting = true; extendCameraSettleWindow(); }, { passive: true });
+    function beginCameraInteraction() {
+      if (cameraReleaseTimer) clearTimeout(cameraReleaseTimer);
+      cameraReleaseTimer = null;
+      pointerReleased = false;
+      userInteracting = true;
+      extendCameraSettleWindow();
+    }
+    plot.addEventListener("mousedown", beginCameraInteraction);
+    plot.addEventListener("touchstart", beginCameraInteraction, { passive: true });
     function finishCameraInteraction() {
       if (!userInteracting) return;
-      userInteracting = false;
-      rememberCurrentCamera();
+      pointerReleased = true;
       extendCameraSettleWindow();
+      scheduleCameraInteractionFinish();
     }
     document.addEventListener("mouseup", finishCameraInteraction);
     document.addEventListener("touchend", finishCameraInteraction, { passive: true });
